@@ -2,7 +2,7 @@ args="$@"
 
 API_KEY="your-api-key"
 
-MESSAGE="Only respond with the most suitable command for the command-line terminal based on this goal: <goal>$args</goal> Only return the most suitable command as if the user wrote it themselves and nothing else. Do not wrap command in bash\nsudo"
+MESSAGE="Respond with the most suitable terminal command based on this query: <query>$args</query> Only return the command and nothing else. Do not wrap command in bash\nsudo"
 
 RESPONSE=$(curl -s -X POST https://api.openai.com/v1/chat/completions \
 -H "Content-Type: application/json" \
@@ -21,9 +21,13 @@ RESPONSE=$(curl -s -X POST https://api.openai.com/v1/chat/completions \
 ]
 }")
 
-COMMAND=$(echo "$RESPONSE" | awk -F: '/"content":/{gsub(/"|,/,""); print $2}')
+if echo "$RESPONSE" | grep -q '"error"'; then
+  echo "An error occurred:"
+  echo "$RESPONSE" | awk -F: '/"message":/{gsub(/"|,/,""); print $2}'
+  exit 1
+fi
 
-echo "$COMMAND"
+COMMAND=$(echo "$RESPONSE" | awk -F: '/"content":/{gsub(/"|,/,""); print $2}')
 
 echo "I'm going to run the following command: $COMMAND"
 read -p "Do you want to continue? (Y/n) " choice
